@@ -139,13 +139,31 @@ The application is production-ready and can be deployed to any static hosting se
 - Debounced search to reduce API calls
 - Efficient re-rendering with React best practices
 
-## 🤝 Contributing
+## LLM/AI Usage
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+- **Tool Used:** GitHub Copilot (Agent Mode)  
+- **Model Used:** Claude Sonnet 4  
+
+### Prompts Used
+- "I’m building a project using the Torre API, where I need to display genomes (profiles) from their database. Can you help me implement a recommendations feature that suggests related genomes based on one person’s profile? Ideally, this should look at skills and experiences to find similar matches."  
+
+- "I need to implement a comparison feature that allows users to select two or more genomes and compare their skill sets side by side. How should I structure the data for this in React, and what’s a clean UI layout for presenting the differences and overlaps?"  
+
+- "For styling the site, I’d like to use a consistent theme with the colors `#CDDC39` (lime green) and `#383B40` (dark gray). Can you suggest how to apply these colors in a Tailwind-based setup to create a clean and responsive design that works well on both desktop and mobile?"  
+
+- "I have API keys provided by Torre that need to be used securely for fetching genome data. Can you guide me on how to integrate these keys in the backend (with Node/Express) without hardcoding them, and make sure they still work when deploying to Vercel?"  
+
+- "I want to add search and filtering capabilities to the genome listing page. Users should be able to search by name or skill and filter by different criteria. What’s the best way to structure these filters in the frontend, and how should I call the Torre API to make it efficient?"  
+
+- "Sometimes when I fetch data from the Torre API, I get CORS errors or undefined results. Can you help me debug these issues and show me how to set up a proxy or middleware so the API calls work properly in development and production?"  
+
+- "How can I organize my backend code so it’s clean and scalable? Right now I have routes, controllers, and services mixed together. Can you suggest a folder structure for an Express + MongoDB backend that follows best practices?"  
+
+- "I want to make sure the app looks polished. Can you suggest responsive UI patterns (like grid layouts or cards) for displaying multiple genomes at once, and also how to handle empty states or loading states so the UX feels smooth?"  
+
+- "What’s the best way to connect my frontend (React + Vite) with the backend API? I want to make sure the environment variables are handled correctly and the API calls remain secure when deployed to Vercel."  
+
+- "How should I handle errors gracefully in the app? For example, if the Torre API returns no results or an error, how can I show a proper error message or fallback UI instead of the site breaking?"  
 
 ## 📄 License
 
