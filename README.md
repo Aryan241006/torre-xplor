@@ -1,4 +1,4 @@
-# Torre Explorer
+# torre xplor
 
 A modern React application for exploring Torre's professional network. Search for people, analyze skills, and discover talent from Torre's global community.
 
@@ -20,43 +20,12 @@ A modern React application for exploring Torre's professional network. Search fo
 - **HTTP Client**: Axios
 - **Build Tool**: Vite
 
-## 📁 Project Structure
-
-```
-torre-explorer/
-├── src/
-│   ├── components/          # Reusable UI components
-│   │   ├── SearchBar.jsx
-│   │   ├── PersonCard.jsx
-│   │   ├── SearchResults.jsx
-│   │   ├── UserProfileModal.jsx
-│   │   ├── SkillsAnalysis.jsx
-│   │   ├── LoadingSpinner.jsx
-│   │   ├── ErrorMessage.jsx
-│   │   ├── FloatingActionButton.jsx
-│   │   └── Toast.jsx
-│   ├── hooks/               # Custom React hooks
-│   │   ├── useSearch.js
-│   │   └── useScrollPosition.js
-│   ├── pages/               # Page components
-│   │   └── SearchPage.jsx
-│   ├── services/            # API services (Backend logic)
-│   │   └── api.js
-│   ├── utils/               # Utility functions
-│   │   └── dataProcessing.js
-│   └── styles/              # Global styles
-│       └── index.css
-├── public/                  # Static assets
-├── dist/                    # Production build
-└── package.json
-```
-
 ## 🔧 Installation & Setup
 
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd torre-explorer
+   cd torre-xplor
    ```
 
 2. **Install dependencies**
@@ -83,15 +52,9 @@ torre-explorer/
 
 The application integrates with Torre's API endpoints:
 
-- **Search API**: `POST https://torre.ai/api/entities/_searchStream`
-- **Genome API**: `GET https://torre.ai/api/genome/bios/{username}`
-
 ### Backend Architecture
 
 The backend logic is separated into dedicated service files:
-
-- `src/services/api.js` - API client configuration and endpoint functions
-- `src/utils/dataProcessing.js` - Data formatting and processing utilities
 
 ## 🎨 Design Features
 
