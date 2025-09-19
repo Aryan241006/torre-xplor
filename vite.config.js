@@ -10,7 +10,7 @@ export default defineConfig({
         target: 'https://torre.ai',
         changeOrigin: true,
         secure: true,
-        rewrite: (path) => path.replace(/^\/api/, '/api'),
+        // Don't rewrite the path since Torre API expects /api/ prefix
         configure: (proxy, options) => {
           proxy.on('error', (err, req, res) => {
             console.log('Proxy error:', err);

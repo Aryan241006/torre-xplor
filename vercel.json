@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://torre.ai/api/$1"
+    },
+    {
+      "source": "/search-api/(.*)",
+      "destination": "https://search.torre.co/api/$1"
+    }
+  ]
+}

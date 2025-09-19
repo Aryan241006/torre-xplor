@@ -1,18 +1,49 @@
 import axios from 'axios';
 
-// Torre API Configuration - Use environment variables for security
-const BASE_URL = import.meta.env.DEV 
-  ? import.meta.env.VITE_DEV_API_PROXY
-  : import.meta.env.VITE_TORRE_API_BASE_URL;
+// Torre API endpoints - using proxy paths for CORS handling
+const BASE_URL = '/api';
+const SEARCH_API_URL = '/search-api';
 
-const SEARCH_API_URL = import.meta.env.DEV 
-  ? import.meta.env.VITE_DEV_SEARCH_PROXY
-  : import.meta.env.VITE_TORRE_SEARCH_API_URL;
+// Configure axios with timeout and headers
+const api = axios.create({
+  timeout: 15000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Add request interceptor for debugging
+api.interceptors.request.use(
+  (config) => {
+    console.log(`Making ${config.method?.toUpperCase()} request to:`, config.url);
+    return config;
+  },
+  (error) => {
+    console.error('Request interceptor error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for debugging and error handling
+api.interceptors.response.use(
+  (response) => {
+    console.log(`Received response from:`, response.config.url, 'Status:', response.status);
+    return response;
+  },
+  (error) => {
+    console.error('Response interceptor error:', {
+      url: error.config?.url,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data
+    });
+    return Promise.reject(error);
+  }
+);
 
 /**
- * Search for people and organizations using Torre's search API
- * @param {Object} searchParams - Search parameters
- * @returns {Promise<Object>} Search results
+ * Search for entities (people and organizations) using Torre's stream API
+ * POST: "https://torre.ai/api/entities/_searchStream"
  */
 export const searchEntities = async (searchParams) => {
   try {
@@ -38,13 +69,7 @@ export const searchEntities = async (searchParams) => {
     console.log('Searching Torre API with:', requestBody);
 
     // Make the request to Torre's entities search endpoint
-    const response = await axios.post(`${BASE_URL}/entities/_searchStream`, requestBody, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      timeout: 15000,
-    });
+    const response = await api.post(`${BASE_URL}/entities/_searchStream`, requestBody);
 
     // Process the response data
     console.log('Raw Torre API response:', response.data);
@@ -118,9 +143,8 @@ export const searchEntities = async (searchParams) => {
 };
 
 /**
- * Get detailed genome information for a specific user
- * @param {string} username - Torre username
- * @returns {Promise<Object>} User genome data
+ * Get user genome/bio information
+ * GET: "https://torre.ai/api/genome/bios/$username"
  */
 export const getUserGenome = async (username) => {
   try {
@@ -129,16 +153,8 @@ export const getUserGenome = async (username) => {
     }
 
     console.log(`Fetching genome for user: ${username}`);
-    console.log(`Using BASE_URL: ${BASE_URL}`);
-    console.log(`Environment: ${import.meta.env.DEV ? 'Development' : 'Production'}`);
-    console.log(`Full URL: ${BASE_URL}/genome/bios/${username}`);
 
-    const response = await axios.get(`${BASE_URL}/genome/bios/${username}`, {
-      headers: {
-        'Accept': 'application/json',
-      },
-      timeout: 15000,
-    });
+    const response = await api.get(`${BASE_URL}/genome/bios/${username}`);
     
     return {
       success: true,
@@ -147,15 +163,14 @@ export const getUserGenome = async (username) => {
     };
   } catch (error) {
     console.error(`Error fetching genome for ${username}:`, error);
-    console.error('Error details:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      url: `${BASE_URL}/genome/bios/${username}`
-    });
     
     if (error.response) {
-      throw new Error(`API Error ${error.response.status}: ${error.response.data?.message || 'User not found'}`);
+      const status = error.response.status;
+      if (status === 404) {
+        throw new Error(`User "${username}" not found`);
+      }
+      const message = error.response.data?.message || error.response.statusText || 'Unknown error';
+      throw new Error(`API Error ${status}: ${message}`);
     } else if (error.request) {
       throw new Error('Network error: Unable to reach Torre API. Please check your internet connection.');
     } else {
@@ -166,8 +181,7 @@ export const getUserGenome = async (username) => {
 
 /**
  * Search for jobs using Torre's job search API
- * @param {Object} searchParams - Job search parameters
- * @returns {Promise<Object>} Job search results
+ * This would use the search.torre.co endpoint for job searches
  */
 export const searchJobs = async (searchParams) => {
   try {
@@ -182,13 +196,7 @@ export const searchJobs = async (searchParams) => {
 
     console.log('Searching jobs with:', requestBody);
 
-    const response = await axios.post(`${SEARCH_API_URL}/jobs/_searchStream`, requestBody, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      timeout: 15000,
-    });
+    const response = await api.post(`${SEARCH_API_URL}/jobs/_searchStream`, requestBody);
     
     return {
       success: true,
@@ -202,11 +210,13 @@ export const searchJobs = async (searchParams) => {
     console.error('Error searching jobs:', error);
     
     if (error.response) {
-      throw new Error(`API Error ${error.response.status}: ${error.response.data?.message || 'Unknown error'}`);
+      const status = error.response.status;
+      const message = error.response.data?.message || error.response.statusText || 'Unknown error';
+      throw new Error(`Job API Error ${status}: ${message}`);
     } else if (error.request) {
-      throw new Error('Network error: Unable to reach Torre job search API.');
+      throw new Error('Network error: Unable to reach Torre Job API. Please check your internet connection.');
     } else {
-      throw new Error(`Request error: ${error.message}`);
+      throw new Error(`Job search error: ${error.message}`);
     }
   }
 };
