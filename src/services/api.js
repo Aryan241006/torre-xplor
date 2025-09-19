@@ -2,12 +2,12 @@ import axios from 'axios';
 
 // Torre API Configuration - Use environment variables for security
 const BASE_URL = import.meta.env.DEV 
-  ? import.meta.env.VITE_DEV_API_PROXY || '/api'
-  : import.meta.env.VITE_TORRE_API_BASE_URL || 'https://torre.ai';
+  ? import.meta.env.VITE_DEV_API_PROXY
+  : import.meta.env.VITE_TORRE_API_BASE_URL;
 
 const SEARCH_API_URL = import.meta.env.DEV 
-  ? import.meta.env.VITE_DEV_SEARCH_PROXY || '/search-api'
-  : import.meta.env.VITE_TORRE_SEARCH_API_URL || 'https://search.torre.co/people/_search/?';
+  ? import.meta.env.VITE_DEV_SEARCH_PROXY
+  : import.meta.env.VITE_TORRE_SEARCH_API_URL;
 
 /**
  * Search for people and organizations using Torre's search API
