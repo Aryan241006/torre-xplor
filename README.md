@@ -155,9 +155,7 @@ The application is production-ready and can be deployed to any static hosting se
 
 - "I want to add search and filtering capabilities to the genome listing page. Users should be able to search by name or skill and filter by different criteria. What’s the best way to structure these filters in the frontend, and how should I call the Torre API to make it efficient?"  
 
-- "Sometimes when I fetch data from the Torre API, I get CORS errors or undefined results. Can you help me debug these issues and show me how to set up a proxy or middleware so the API calls work properly in development and production?"  
-
-- "How can I organize my backend code so it’s clean and scalable? Right now I have routes, controllers, and services mixed together. Can you suggest a folder structure for an Express + MongoDB backend that follows best practices?"  
+- "Sometimes when I fetch data from the Torre API, I get CORS errors or undefined results. Can you help me debug these issues and show me how to set up a proxy or middleware so the API calls work properly in development and production?"    
 
 - "I want to make sure the app looks polished. Can you suggest responsive UI patterns (like grid layouts or cards) for displaying multiple genomes at once, and also how to handle empty states or loading states so the UX feels smooth?"  
 
