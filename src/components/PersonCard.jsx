@@ -207,7 +207,7 @@ const PersonCard = ({
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2">
-            <ComparisonButton person={person} size="sm" showLabel={showAddButton ? true : false} />
+            <ComparisonButton person={person} size="sm" />
             {!showAddButton && (
               <motion.button
                 whileHover={{ scale: 1.05 }}

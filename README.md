@@ -1,172 +1,154 @@
 # torre xplor
 
-A modern React application for exploring Torre's professional network. Search for people, analyze skills, and discover talent from Torre's global community.
+A full-stack app for exploring [Torre](https://torre.ai)'s professional network. Search for people, view their full profiles ("genomes"), compare up to four professionals side by side, and get recommendations for similar professionals.
 
-## 🚀 Features
+The React frontend talks only to the project's own Express backend. The backend calls Torre's public APIs, cleans up the data, and runs the comparison and recommendation logic on the server.
 
-- **Real-time Search**: Search through Torre's network of professionals
-- **Skills Analysis**: Visualize trending skills and strengths with interactive charts
-- **Profile Details**: View detailed user profiles with skills, experience, and education
-- **Modern UI/UX**: Beautiful, responsive design with smooth animations
-- **Export & Share**: Export search results and share findings
-- **Floating Actions**: Quick access to common actions with floating action button
+## Features
 
-## 🛠 Tech Stack
+- **Search**: find people on Torre by name or keyword, with debounced input and "load more" pagination.
+- **Profiles**: skills with proficiency levels, work experience, education, languages and links.
+- **Compare**: pick 2 to 4 people and see an overall match score, shared and unique skills, and insights generated for each pair.
+- **Recommendations**: find professionals similar to someone, ranked by similarity, with the reasons for each match.
+- **Themes**: light, dark, or follow the system setting.
+- **Export and share**: download search results as JSON, or share a link.
 
-- **Frontend**: React 18 with Vite
-- **Styling**: Tailwind CSS v4.0
-- **Animations**: Framer Motion
-- **Icons**: Lucide React
-- **HTTP Client**: Axios
-- **Build Tool**: Vite
+## Architecture
 
-## 🔧 Installation & Setup
+```
+Browser (React)
+   │  fetch('/api/...')
+   ▼
+Vercel ── vercel.json rewrites /api/* ──► api/index.js  (serverless function)
+                                             │
+                                             ▼
+                                       server/app.js  (Express)
+                                         ├─ rate limiting
+                                         ├─ input validation
+                                         ├─ routes ──► services (scoring, recommendations)
+                                         └─ error handler
+                                             │
+                                             ▼
+                                      Torre public API
+                                      (torre.ai/api)
+```
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd torre-xplor
-   ```
+The same Express app runs in two places with no code changes:
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+- **Locally**: `server/dev.js` starts it on port 3001, and Vite's dev server forwards `/api` requests to it.
+- **On Vercel**: `api/index.js` exports the app as a serverless function, and `vercel.json` sends every `/api/*` request to it.
 
-3. **Start development server**
-   ```bash
-   npm run dev
-   ```
+### Why a backend?
 
-4. **Build for production**
-   ```bash
-   npm run build
-   ```
+- **One request instead of dozens.** A recommendation needs about 6 Torre searches plus up to 40 profile fetches. The browser makes one request; the server does the fan-out, fetching 8 profiles at a time.
+- **Business logic stays on the server.** Scoring, ranking and data normalization live in one place, and the frontend only displays results.
+- **Protection.** Input is validated and requests are rate-limited before anything reaches Torre.
+- **Caching.** Repeated searches and profiles are served from cache instead of calling Torre again.
 
-5. **Preview production build**
-   ```bash
-   npm run preview
-   ```
+Torre's endpoints are public, so there is no API key to manage. If a key were ever needed, it would go in a Vercel environment variable and be read only by the server. `TORRE_BASE_URL` is already configurable this way.
 
-## 🌐 API Integration
+## Project structure
 
-The application integrates with Torre's API endpoints:
+```
+api/
+  index.js                 Vercel entry point; exports the Express app
+server/
+  app.js                   Express setup: middleware and routes
+  dev.js                   Starts the API locally (port 3001)
+  routes/                  search, genome, compare, recommendations
+  services/
+    torreClient.js         The only module that calls Torre (timeouts, caching, errors)
+    profile.js             Turns raw Torre data into clean shapes
+    comparison.js          Similarity scoring between two people
+    recommendations.js     Finds and ranks similar professionals
+  middleware/              validation, rate limiting, error handling
+  utils/                   TTL cache, concurrency limiter, helpers
+src/
+  services/api.js          Frontend client for the backend
+  contexts/                Comparison selection state, theme
+  hooks/useSearch.js       Search state, pagination, request cancelling
+  pages/, components/      UI
+```
 
-### Backend Architecture
+## API reference
 
-The backend logic is separated into dedicated service files:
+All endpoints return JSON. Errors look like `{ "error": "message" }`.
 
-## 🎨 Design Features
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/health` | Health check |
+| GET | `/api/search?q=&limit=&offset=` | Search people. `q` is 3 to 100 characters, `limit` 1 to 50 (default 15). |
+| GET | `/api/genome/:username` | A person's full profile |
+| POST | `/api/compare` | Body: `{ "usernames": ["a", "b"] }` (2 to 4, unique). Returns each person plus a similarity analysis for every pair. |
+| GET | `/api/recommendations/:username?limit=&exclude=` | Similar professionals. `limit` 1 to 20 (default 8); `exclude` is a comma-separated list of usernames. |
 
-### Modern UI Components
-- Responsive grid layouts
-- Smooth hover effects and transitions
-- Loading skeletons and states
-- Toast notifications for user feedback
-- Modal dialogs for detailed views
+**Status codes**
 
-### Animations
-- Page transitions with Framer Motion
-- Staggered card animations
-- Smooth scroll behaviors
-- Interactive button states
+- `400`: invalid input.
+- `404`: the user doesn't exist on Torre.
+- `429`: rate limit reached. Every client gets 60 requests per minute; recommendations are limited to 10 per minute.
+- `502` or `504`: Torre is failing or timed out.
 
-### Accessibility
-- Keyboard navigation support
-- ARIA labels and roles
-- Focus management
-- Screen reader friendly
+## How similarity is scored
 
-## 📊 Skills Analysis
+Torre calls a person's skills "strengths" and rates each one with a word. The backend maps those words to numbers: master 1.0, expert 0.8, proficient 0.6, novice 0.4.
 
-The application includes advanced data visualization features:
+Two people are compared on four signals, each scored from 0 to 1:
 
-- **Trending Skills**: Bar charts showing most common skills
-- **Strength Analysis**: Visual representation of professional strengths
-- **Statistics**: Key metrics and insights from search results
-- **Export Functionality**: Download analysis data as JSON
+| Signal | Weight | How it's measured |
+|---|---|---|
+| Skills | 40% | Overlap of all their skills (Dice coefficient: 2 × shared ÷ total) |
+| Core strengths | 30% | Overlap of skills rated "proficient" or above |
+| Experience | 20% | Ratio of their years of work experience (shorter ÷ longer) |
+| Education | 10% | Overlap of schools and degrees |
 
-## 🚀 Deployment
+The overall score is the weighted average. If either person has no data for a signal (for example, no education listed), that signal is skipped and the remaining weights are rescaled, so missing data doesn't count as a mismatch.
 
-The application is production-ready and can be deployed to any static hosting service:
+The backend also generates **insights** for each pair. Examples: skill gaps (expert-level skills only one of them has), complementary skills, or a possible mentoring match when their years of experience differ a lot.
 
-- **Vercel**: `vercel --prod`
-- **Netlify**: Drag and drop the `dist` folder
-- **GitHub Pages**: Use GitHub Actions for automated deployment
+## How recommendations work
 
-## 🔍 Usage
+1. Fetch the person's profile.
+2. Build up to 6 search queries from their top skills and headline keywords.
+3. Run the searches in parallel, then merge and de-duplicate the people found (up to 40 candidates).
+4. Fetch each candidate's profile, 8 at a time, and score it against the person.
+5. Keep candidates who share at least 2 skills, and rank them by score.
 
-1. **Search**: Enter a name or skill in the search bar
-2. **Browse Results**: View professionals in a responsive grid
-3. **View Profiles**: Click on any card to see detailed information
-4. **Analyze Skills**: Toggle the skills analysis to see trends
-5. **Export Data**: Use the floating action button to export results
-6. **Share**: Share search results with others
+## Caching
 
-## 🎯 Key Features Showcase
+- **In memory**: profiles are cached for 5 minutes and searches for 1 minute, inside each serverless instance.
+- **CDN**: GET responses send `Cache-Control: s-maxage=...`, so Vercel's servers can answer repeated requests without running the function.
 
-### Creative Elements
-- Interactive skills analysis with data visualization
-- Floating action button with expandable menu
-- Toast notification system
-- Smooth animations and micro-interactions
+## Known limitations
 
-### Technical Excellence
-- Separation of concerns (frontend/backend logic)
-- Custom React hooks for state management
-- Error handling and loading states
-- Responsive design for all devices
-- Performance optimized with lazy loading
+- **Per-instance cache and rate limits.** Both are kept in each serverless instance's memory. They reduce load and stop abuse, but they aren't shared between instances or kept across cold starts. A shared store such as Redis would be needed for exact, global limits.
+- **Results depend on Torre's data.** Many search results are organizations or near-empty profiles, so some people get only a few recommendations.
+- **Search has no total count.** Torre's search stream doesn't report how many results exist in total, so pagination uses "load more".
 
-### User Experience
-- Intuitive search interface
-- Real-time search with debouncing
-- Pagination for large result sets
-- Keyboard shortcuts and accessibility
-- Export and sharing capabilities
+## Getting started
 
-## 📝 Development Notes
+Requires Node.js 20 or newer.
 
-### Code Quality
-- ESLint configuration for code consistency
-- Component-based architecture
-- Custom hooks for reusable logic
-- Utility functions for data processing
+```bash
+npm install
+npm run dev        # starts the API (port 3001) and Vite together
+```
 
-### Performance
-- Optimized bundle size with tree shaking
-- Lazy loading of components
-- Debounced search to reduce API calls
-- Efficient re-rendering with React best practices
+Other scripts:
 
-## LLM/AI Usage
+| Script | What it does |
+|---|---|
+| `npm run dev:api` | Start only the API (restarts when files change) |
+| `npm run dev:web` | Start only the Vite frontend |
+| `npm run build` | Production build of the frontend |
+| `npm run lint` | Run ESLint |
 
-- **Tool Used:** GitHub Copilot (Agent Mode)  
-- **Model Used:** Claude Sonnet 4  
+## Deployment
 
-### Prompts Used
-- "I’m building a project using the Torre API, where I need to display genomes (profiles) from their database. Can you help me implement a recommendations feature that suggests related genomes based on one person’s profile? Ideally, this should look at skills and experiences to find similar matches."  
+The project is deployed on Vercel with zero extra configuration. Vercel builds the Vite frontend and turns `api/index.js` into a serverless function; `vercel.json` routes `/api/*` to it.
 
-- "I need to implement a comparison feature that allows users to select two or more genomes and compare their skill sets side by side. How should I structure the data for this in React, and what’s a clean UI layout for presenting the differences and overlaps?"  
+## Tech stack
 
-- "For styling the site, I’d like to use a consistent theme with the colors `#CDDC39` (lime green) and `#383B40` (dark gray). Can you suggest how to apply these colors in a Tailwind-based setup to create a clean and responsive design that works well on both desktop and mobile?"  
-
-- "I have API keys provided by Torre that need to be used securely for fetching genome data. Can you guide me on how to integrate these keys in the backend (with Node/Express) without hardcoding them, and make sure they still work when deploying to Vercel?"  
-
-- "I want to add search and filtering capabilities to the genome listing page. Users should be able to search by name or skill and filter by different criteria. What’s the best way to structure these filters in the frontend, and how should I call the Torre API to make it efficient?"  
-
-- "Sometimes when I fetch data from the Torre API, I get CORS errors or undefined results. Can you help me debug these issues and show me how to set up a proxy or middleware so the API calls work properly in development and production?"    
-
-- "I want to make sure the app looks polished. Can you suggest responsive UI patterns (like grid layouts or cards) for displaying multiple genomes at once, and also how to handle empty states or loading states so the UX feels smooth?"  
-
-- "What’s the best way to connect my frontend (React + Vite) with the backend API? I want to make sure the environment variables are handled correctly and the API calls remain secure when deployed to Vercel."  
-
-- "How should I handle errors gracefully in the app? For example, if the Torre API returns no results or an error, how can I show a proper error message or fallback UI instead of the site breaking?"  
-
-## 📄 License
-
-This project is created as a technical test for Torre Engineering.
-
----
-
-Built with ❤️ using React, Tailwind CSS, and Torre API
+- **Frontend**: React 19, Vite 7, Tailwind CSS 4, Framer Motion, Lucide icons
+- **Backend**: Node.js, Express 5, deployed as a Vercel serverless function
+- **Data**: Torre public API

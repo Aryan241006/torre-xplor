@@ -13,7 +13,6 @@ const StarRating = ({ rating, size = 16, color = 'var(--torre-accent)', showRati
   
   for (let i = 1; i <= 5; i++) {
     const isFilled = i <= normalizedRating;
-    const isPartial = i > normalizedRating && i - 1 < normalizedRating;
     
     stars.push(
       <Star

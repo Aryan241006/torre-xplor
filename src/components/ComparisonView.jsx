@@ -59,12 +59,10 @@ const ComparisonView = () => {
       setSecondPerson(person);
       addPersonToComparison(person);
       setStep('analyzing');
-      // Start comparison after a short delay
-      setTimeout(() => {
-        compareSelectedPeople().then(() => {
-          setStep('comparison');
-        });
-      }, 1000);
+      // Pass both people explicitly: selectedPeople won't include the second one until the next render.
+      compareSelectedPeople([...selectedPeople, person]).then(() => {
+        setStep('comparison');
+      });
     } else if (step === 'add-more') {
       addPersonToComparison(person);
     }
@@ -84,7 +82,10 @@ const ComparisonView = () => {
       setFirstPerson(selectedPeople[0]);
       setSecondPerson(selectedPeople[1]);
     }
-  }, [selectedPeople.length, comparisons.length]); // Remove step from dependencies to prevent conflicts
+  // Only re-run when the number of people or comparisons changes; reacting to `step`
+  // would undo the user moving between steps.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPeople.length, comparisons.length]);
 
   // Initial state - no people selected
   if (step === 'initial') {
@@ -506,16 +507,16 @@ const ComparisonView = () => {
                 <Users style={{ color: 'var(--torre-accent)' }} size={28} />
                 Professional Comparison
               </h2>
-              <p className="mt-1 flex items-center gap-2" style={{ color: 'var(--torre-text-secondary)' }}>
-                Analyzing {selectedPeople.length} professionals • 
-                <StarRating 
-                  rating={(comparison.similarity?.overallScore || 0) * 5} 
-                  size={14} 
-                  color="var(--torre-accent)" 
-                  showRating={false} 
+              <div className="mt-1 flex items-center gap-2" style={{ color: 'var(--torre-text-secondary)' }}>
+                Analyzing {selectedPeople.length} professionals •
+                <StarRating
+                  rating={(comparison.similarity?.overallScore || 0) * 5}
+                  size={14}
+                  color="var(--torre-accent)"
+                  showRating={false}
                 />
                 compatibility
-              </p>
+              </div>
             </div>
 
             <div className="flex items-center gap-3">
@@ -763,10 +764,7 @@ const ComparisonView = () => {
       </p>
 
       <motion.button
-        onClick={() => {
-          console.log('Fallback Start Comparing button clicked, current step:', step);
-          setStep('first-search');
-        }}
+        onClick={() => setStep('first-search')}
         className="inline-flex items-center gap-3 px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-200"
         style={{
           backgroundColor: 'var(--torre-accent)',
@@ -797,8 +795,8 @@ const OverviewTab = ({ comparison }) => {
     <div className="space-y-6">
       {/* People Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <PersonOverview person={person1} title="Person 1" comparison={comparison} isFirst={true} />
-        <PersonOverview person={person2} title="Person 2" comparison={comparison} isFirst={false} />
+        <PersonOverview person={person1} title="Person 1" comparison={comparison} />
+        <PersonOverview person={person2} title="Person 2" comparison={comparison} />
       </div>
 
       {/* Overall Compatibility with Star Ratings */}
@@ -823,7 +821,12 @@ const OverviewTab = ({ comparison }) => {
           </div>
           <div className="flex justify-between items-center">
             <span className="font-medium" style={{ color: 'var(--torre-text-primary)' }}>Experience Level</span>
-            <StarRating rating={(comparison.similarity?.experienceScore || 0) * 5} color="var(--torre-accent)" />
+            {/* null means one of them has no work history on Torre, so there's nothing to compare */}
+            {comparison.similarity?.experienceScore == null ? (
+              <span className="text-sm" style={{ color: 'var(--torre-text-muted)' }}>Not enough data</span>
+            ) : (
+              <StarRating rating={comparison.similarity.experienceScore * 5} color="var(--torre-accent)" />
+            )}
           </div>
         </div>
       </div>
@@ -913,57 +916,43 @@ const SkillsTab = ({ comparison }) => {
   );
 };
 
-const InsightsTab = ({ comparison }) => {
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Collaboration Potential */}
-        <div className="rounded-lg border p-6" style={{ backgroundColor: 'var(--torre-bg-tertiary)', borderColor: 'var(--torre-border)' }}>
-          <h3 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: 'var(--torre-text-primary)' }}>
-            <Target style={{ color: 'var(--torre-accent)' }} size={20} />
-            Collaboration Potential
-          </h3>
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--torre-green)' }}></div>
-              <span className="text-sm" style={{ color: 'var(--torre-text-secondary)' }}>
-                Strong technical alignment
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--torre-blue)' }}></div>
-              <span className="text-sm" style={{ color: 'var(--torre-text-secondary)' }}>
-                Complementary skill sets
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--torre-accent)' }}></div>
-              <span className="text-sm" style={{ color: 'var(--torre-text-secondary)' }}>
-                Similar experience levels
-              </span>
-            </div>
-          </div>
-        </div>
+const PRIORITY_COLORS = {
+  high: 'var(--torre-green)',
+  medium: 'var(--torre-blue)',
+  low: 'var(--torre-text-muted)',
+};
 
-        {/* Team Recommendations */}
-        <div className="rounded-lg border p-6" style={{ backgroundColor: 'var(--torre-bg-tertiary)', borderColor: 'var(--torre-border)' }}>
-          <h3 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: 'var(--torre-text-primary)' }}>
-            <Award style={{ color: 'var(--torre-accent)' }} size={20} />
-            Recommendations
-          </h3>
-          <div className="space-y-3 text-sm" style={{ color: 'var(--torre-text-secondary)' }}>
-            <p>These professionals would work well together on technical projects.</p>
-            <p>Consider pairing them for mentorship opportunities.</p>
-            <p>Strong potential for knowledge sharing and growth.</p>
-          </div>
-        </div>
+// Insights are generated per pair by the backend (server/services/comparison.js).
+const InsightsTab = ({ comparison }) => {
+  const insights = comparison?.similarity?.details?.recommendations || [];
+
+  if (insights.length === 0) {
+    return (
+      <div className="rounded-lg border p-6 text-center text-sm" style={{ backgroundColor: 'var(--torre-bg-tertiary)', borderColor: 'var(--torre-border)', color: 'var(--torre-text-secondary)' }}>
+        Not enough profile data to generate insights for this pair.
       </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {insights.map((insight) => (
+        <div key={insight.type} className="rounded-lg border p-6" style={{ backgroundColor: 'var(--torre-bg-tertiary)', borderColor: 'var(--torre-border)' }}>
+          <h3 className="font-bold text-lg mb-2 flex items-center gap-2" style={{ color: 'var(--torre-text-primary)' }}>
+            <Target style={{ color: PRIORITY_COLORS[insight.priority] || 'var(--torre-accent)' }} size={20} />
+            {insight.title}
+          </h3>
+          <p className="text-sm" style={{ color: 'var(--torre-text-secondary)' }}>
+            {insight.description}
+          </p>
+        </div>
+      ))}
     </div>
   );
 };
 
 // Helper Components
-const PersonOverview = ({ person, title, comparison = null, isFirst = false }) => {
+const PersonOverview = ({ person, title, comparison = null }) => {
   // Calculate common skills for this person if comparison data is available
   const commonSkillsCount = comparison?.similarity?.details?.commonSkills?.length || 0;
   const totalSkills = person?.skills?.length || 0;

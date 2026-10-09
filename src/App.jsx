@@ -12,7 +12,7 @@ function App() {
         <ComparisonProvider>
           <div className="min-h-screen" style={{ backgroundColor: 'var(--torre-bg-primary)' }}>
             {/* Fixed Theme Toggle */}
-            <ThemeToggle size="md" showLabel={false} />
+            <ThemeToggle />
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
               <SearchPage />

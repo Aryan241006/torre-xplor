@@ -1,56 +1,5 @@
 import React, { createContext, useContext, useReducer, useCallback } from 'react';
-import { calculateSimilarity } from '../services/comparison.js';
-import { findSimilarProfessionals } from '../services/recommendations.js';
-import { getUserGenome } from '../services/api.js';
-
-// Helper functions to extract data from genome
-const extractSkillsFromGenome = (genomeData) => {
-  const skills = [];
-  
-  // Torre genome structure: skills are in the root level
-  if (genomeData?.skills) {
-    genomeData.skills.forEach(skill => {
-      if (skill.name) {
-        skills.push({
-          name: skill.name,
-          proficiency: skill.weight || skill.proficiency || 1
-        });
-      }
-    });
-  }
-  
-  // Also check interests
-  if (genomeData?.interests) {
-    genomeData.interests.forEach(interest => {
-      if (interest.name) {
-        skills.push({
-          name: interest.name,
-          proficiency: interest.weight || interest.proficiency || 1
-        });
-      }
-    });
-  }
-  
-  return skills;
-};
-
-const extractStrengthsFromGenome = (genomeData) => {
-  const strengths = [];
-  
-  // Torre genome structure: strengths are in the root level
-  if (genomeData?.strengths) {
-    genomeData.strengths.forEach(strength => {
-      if (strength.name) {
-        strengths.push({
-          name: strength.name,
-          proficiency: strength.weight || strength.proficiency || 1
-        });
-      }
-    });
-  }
-  
-  return strengths;
-};
+import { compareProfiles, getRecommendations } from '../services/api.js';
 
 // Initial state
 const initialState = {
@@ -77,7 +26,7 @@ const ACTIONS = {
 // Reducer function
 const comparisonReducer = (state, action) => {
   switch (action.type) {
-    case ACTIONS.ADD_PERSON:
+    case ACTIONS.ADD_PERSON: {
       // Prevent duplicates and limit to 4 people for comparison
       if (state.selectedPeople.length >= 4) {
         return {
@@ -99,6 +48,7 @@ const comparisonReducer = (state, action) => {
         selectedPeople: [...state.selectedPeople, action.payload],
         error: null
       };
+    }
 
     case ACTIONS.REMOVE_PERSON:
       return {
@@ -177,132 +127,51 @@ export const ComparisonProvider = ({ children }) => {
     dispatch({ type: ACTIONS.CLEAR_SELECTION });
   }, []);
 
-  // Compare selected people
-  const compareSelectedPeople = useCallback(async () => {
-    if (state.selectedPeople.length < 2) {
+  /**
+   * Compare people on the backend, which fetches their profiles and scores every pair.
+   * Pass `people` explicitly when calling right after adding someone: the state
+   * update hasn't been applied yet, so selectedPeople would still be the old list.
+   */
+  const compareSelectedPeople = useCallback(async (people = state.selectedPeople) => {
+    if (people.length < 2) {
       dispatch({ type: ACTIONS.SET_ERROR, payload: 'At least 2 people are required for comparison' });
       return;
     }
 
+    dispatch({ type: ACTIONS.SET_ERROR, payload: null });
     dispatch({ type: ACTIONS.SET_LOADING, payload: true });
-    dispatch({ type: ACTIONS.SET_ERROR, payload: null }); // Clear any previous errors
 
     try {
-      const comparisons = [];
-      const peopleWithGenome = [];
-
-      // Get genome data for all selected people
-      for (const person of state.selectedPeople) {
-        try {
-          const genomeResponse = await getUserGenome(person.username);
-          const genomeData = genomeResponse.data;
-          
-          // Extract skills and strengths from genome data
-          const skills = extractSkillsFromGenome(genomeData);
-          const strengths = extractStrengthsFromGenome(genomeData);
-          
-          console.log(`Extracted data for ${person.username}:`, {
-            skills: skills.length,
-            strengths: strengths.length,
-            genomeKeys: Object.keys(genomeData || {}),
-            picture: genomeData.picture,
-            originalPicture: person.picture,
-            finalPicture: genomeData.picture || person.picture
-          });
-          
-          peopleWithGenome.push({
-            ...person,
-            genome: genomeData,
-            skills: skills,
-            strengths: strengths,
-            professionalHeadline: genomeData.professionalHeadline || genomeData.headline || person.professionalHeadline || person.headline,
-            picture: genomeData.picture || person.picture,
-            name: genomeData.name || person.name,
-            verified: genomeData.verified || person.verified
-          });
-        } catch (error) {
-          console.warn(`Could not fetch genome for ${person.username}:`, error);
-          peopleWithGenome.push({
-            ...person,
-            genome: person,
-            skills: [],
-            strengths: []
-          });
-        }
-      }
-
-      // Generate all pairwise comparisons
-      for (let i = 0; i < peopleWithGenome.length; i++) {
-        for (let j = i + 1; j < peopleWithGenome.length; j++) {
-          const person1 = peopleWithGenome[i];
-          const person2 = peopleWithGenome[j];
-          
-          const similarity = calculateSimilarity(person1.genome, person2.genome);
-          
-          console.log(`Similarity between ${person1.username} and ${person2.username}:`, {
-            overallScore: similarity.overallScore,
-            skillsScore: similarity.skillsScore,
-            strengthsScore: similarity.strengthsScore
-          });
-          
-          comparisons.push({
-            id: `${person1.username}-${person2.username}`,
-            person1,
-            person2,
-            similarity,
-            timestamp: new Date().toISOString()
-          });
-          
-          console.log(`Created comparison between ${person1.username} and ${person2.username}:`, {
-            person1: { name: person1.name, picture: person1.picture },
-            person2: { name: person2.name, picture: person2.picture },
-            hasDetails: !!similarity.details,
-            commonSkills: similarity.details?.commonSkills?.length || 0,
-            uniqueSkills1: similarity.details?.uniqueSkills1?.length || 0,
-            uniqueSkills2: similarity.details?.uniqueSkills2?.length || 0
-          });
-        }
-      }
-
+      const { comparisons } = await compareProfiles(people.map(p => p.username));
       dispatch({ type: ACTIONS.SET_COMPARISONS, payload: comparisons });
       dispatch({ type: ACTIONS.SET_LOADING, payload: false });
-
     } catch (error) {
-      console.error('Error comparing people:', error);
       dispatch({ type: ACTIONS.SET_ERROR, payload: error.message });
     }
   }, [state.selectedPeople]);
 
-  // Get recommendations for a specific person
-  const getRecommendationsForPerson = useCallback(async (person, options = {}) => {
+  // Get recommendations for a specific person (one request; the backend does the searching and scoring)
+  const getRecommendationsForPerson = useCallback(async (person, { limit = 8 } = {}) => {
+    dispatch({ type: ACTIONS.SET_ERROR, payload: null });
     dispatch({ type: ACTIONS.SET_LOADING, payload: true });
 
     try {
-      const recommendationsResponse = await findSimilarProfessionals(person, {
-        limit: 8,
-        minSimilarityScore: 0.3,
-        excludeUsernames: state.selectedPeople.map(p => p.username),
-        ...options
+      const result = await getRecommendations(person.username, {
+        limit,
+        exclude: state.selectedPeople.map(p => p.username).filter(u => u !== person.username),
       });
 
-      if (recommendationsResponse.success) {
-        dispatch({ 
-          type: ACTIONS.SET_RECOMMENDATIONS, 
-          payload: {
-            targetPerson: person,
-            recommendations: recommendationsResponse.data,
-            searchQueries: recommendationsResponse.searchQueries,
-            totalCandidates: recommendationsResponse.totalCandidates
-          }
-        });
-      } else {
-        throw new Error(recommendationsResponse.error || 'Failed to get recommendations');
-      }
-
+      dispatch({
+        type: ACTIONS.SET_RECOMMENDATIONS,
+        payload: {
+          targetPerson: result.target,
+          recommendations: result.recommendations,
+          searchQueries: result.searchQueries,
+          totalCandidates: result.totalCandidates
+        }
+      });
       dispatch({ type: ACTIONS.SET_LOADING, payload: false });
-
     } catch (error) {
-      console.error('Error getting recommendations:', error);
       dispatch({ type: ACTIONS.SET_ERROR, payload: error.message });
     }
   }, [state.selectedPeople]);

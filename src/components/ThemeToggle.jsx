@@ -3,32 +3,8 @@ import { motion } from 'framer-motion';
 import { Sun, Moon, Monitor } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
-const ThemeToggle = ({ size = 'md', showLabel = false }) => {
+const ThemeToggle = ({ showLabel = false }) => {
   const { isDarkMode, toggleTheme, isSystemTheme } = useTheme();
-
-  const sizeClasses = {
-    sm: 'w-12 h-6',
-    md: 'w-14 h-7',
-    lg: 'w-16 h-8'
-  };
-
-  const sliderSizes = {
-    sm: 'w-5 h-5',
-    md: 'w-6 h-6',
-    lg: 'w-7 h-7'
-  };
-
-  const iconSizes = {
-    sm: 12,
-    md: 14,
-    lg: 16
-  };
-
-  const slideDistances = {
-    sm: 24,
-    md: 28,
-    lg: 32
-  };
 
   return (
     <div className="flex items-center gap-3">

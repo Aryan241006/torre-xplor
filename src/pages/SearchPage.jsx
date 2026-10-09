@@ -91,11 +91,9 @@ const SearchPage = () => {
         results: results.map(person => ({
           name: person.name,
           username: person.username,
-          headline: person.headline,
+          headline: person.professionalHeadline,
           location: person.location?.name,
-          skills: person.skills?.slice(0, 5).map(s => s.name),
           verified: person.verified,
-          openToWork: person.openToWork,
         })),
         exportedAt: new Date().toISOString(),
       };
@@ -113,7 +111,7 @@ const SearchPage = () => {
       URL.revokeObjectURL(url);
 
       toast.success('Data exported successfully!');
-    } catch (error) {
+    } catch {
       toast.error('Failed to export data');
     }
   };
@@ -302,7 +300,7 @@ const SearchPage = () => {
                   { id: 'search', label: 'Search & Results', shortLabel: 'Search', icon: BarChart3 },
                   { id: 'compare', label: 'Compare People', shortLabel: 'Compare', icon: Users },
                   { id: 'recommendations', label: 'Recommendations', shortLabel: 'Recommend', icon: Sparkles }
-                ].map((tab, index) => {
+                ].map((tab) => {
                 const Icon = tab.icon;
                 return (
                   <motion.button

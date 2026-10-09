@@ -288,7 +288,7 @@ const GenomePage = ({ user, loading, error, onBack }) => {
           </div>
 
           {/* Skills Section */}
-          {((user.strengths && user.strengths.length > 0) || (user.skills && user.skills.length > 0) || (user.stats?.strengths && user.stats.strengths.length > 0)) && (
+          {user.strengths?.length > 0 && (
             <div className="card-iconoir mb-8">
               <div className="p-6">
                 <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--torre-text-primary)' }}>
@@ -296,7 +296,7 @@ const GenomePage = ({ user, loading, error, onBack }) => {
                   Skills & Strengths
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {(user.strengths || user.skills || user.stats?.strengths || []).slice(0, 12).map((strength, index) => (
+                  {user.strengths.slice(0, 12).map((strength, index) => (
                     <div
                       key={strength.id || index}
                       className="p-4 rounded-lg border transition-all duration-200"
@@ -308,7 +308,7 @@ const GenomePage = ({ user, loading, error, onBack }) => {
                       <h3 className="font-semibold mb-2" style={{ color: 'var(--torre-text-primary)' }}>
                         {strength.name}
                       </h3>
-                      {strength.weight && (
+                      {strength.proficiency && (
                         <div className="flex items-center gap-2">
                           <div
                             className="h-2 rounded-full"
@@ -321,12 +321,12 @@ const GenomePage = ({ user, loading, error, onBack }) => {
                               className="h-2 rounded-full transition-all duration-300"
                               style={{
                                 backgroundColor: 'var(--torre-accent)',
-                                width: `${Math.min(strength.weight * 10, 100)}%`
+                                width: `${Math.round((strength.level || 0) * 100)}%`
                               }}
                             />
                           </div>
-                          <span className="text-sm font-medium" style={{ color: 'var(--torre-text-muted)' }}>
-                            {strength.weight}
+                          <span className="text-sm font-medium capitalize whitespace-nowrap" style={{ color: 'var(--torre-text-muted)' }}>
+                            {strength.proficiency}
                           </span>
                         </div>
                       )}

@@ -154,33 +154,12 @@ const SearchResults = ({
           className={compact ? "grid grid-cols-1 gap-3" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 items-stretch"}
         >
           {results
-            .filter(result => {
-              const username = result.person?.username || result.username;
-              return !excludeUsernames.includes(username);
-            })
+            .filter(result => !excludeUsernames.includes(result.username))
             .map((result, index) => (
             <PersonCard
-              key={result.person?.id || result.person?.username || result.id || result.username || index}
-              person={{
-                ...result.person,
-                skills: result.skills || [],
-                strengths: result.strengths || [],
-                // Handle both old and new data structures
-                name: result.person?.name || result.name,
-                headline: result.person?.professionalHeadline || result.person?.headline || result.headline,
-                picture: result.person?.picture || result.picture,
-                username: result.person?.username || result.username,
-                verified: result.person?.verified || result.verified,
-                location: result.person?.location || result.location,
-              }}
-              onClick={(personData) => {
-                // Pass the original result structure with person nested
-                onPersonClick({
-                  person: result.person || result,
-                  skills: result.skills || [],
-                  strengths: result.strengths || [],
-                });
-              }}
+              key={result.username}
+              person={{ ...result, headline: result.professionalHeadline }}
+              onClick={() => onPersonClick({ person: result })}
               index={index}
               showAddButton={showAddButton}
               compact={compact}

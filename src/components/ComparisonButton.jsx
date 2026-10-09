@@ -5,7 +5,7 @@ import { useComparison } from '../contexts/ComparisonContext.jsx';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 import Avatar from './Avatar.jsx';
 
-const ComparisonButton = ({ person, size = 'sm', showLabel = true }) => {
+const ComparisonButton = ({ person, size = 'sm' }) => {
   const { 
     addPersonToComparison, 
     removePersonFromComparison, 
@@ -76,18 +76,6 @@ const ComparisonButton = ({ person, size = 'sm', showLabel = true }) => {
     }
   };
 
-  const getLabel = () => {
-    if (!showLabel) return null;
-    
-    if (isSelected) {
-      return 'Remove';
-    } else if (canAdd) {
-      return 'Compare';
-    } else {
-      return 'Max reached';
-    }
-  };
-
   const getTooltip = () => {
     if (isSelected) {
       return 'Remove from comparison';
@@ -141,7 +129,7 @@ export const ComparisonPanel = ({ onNavigateToCompare }) => {
         }
         setIsComparing(false);
       }, 1500);
-    } catch (error) {
+    } catch {
       setIsComparing(false);
     }
   };

@@ -33,10 +33,7 @@ const RecommendationsView = ({ onViewGenome, onSwitchToCompare }) => {
 
   const handleGetRecommendations = async (person) => {
     setSelectedPerson(person);
-    await getRecommendationsForPerson(person, {
-      limit: 20, // Increased from 12 to 20
-      minSimilarityScore: 0.1 // Lowered from 0.2 to 0.1 for more results
-    });
+    await getRecommendationsForPerson(person, { limit: 20 });
   };
 
   const displayedRecommendations = recommendations.recommendations || [];
